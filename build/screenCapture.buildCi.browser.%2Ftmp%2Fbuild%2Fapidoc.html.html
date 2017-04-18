@@ -1,0 +1,252 @@
+<html><head></head><body><div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a href="https://github.com/HenrikJoreteg/templatizer">templatizer (v2.0.5)</a>
+</h1>
+<h4>Simple solution for compiling jade templates into vanilla JS functions for blazin' fast client-side use.</h4>
+<div class="apidocSectionDiv"><a href="#apidoc.tableOfContents" id="apidoc.tableOfContents"><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.templatizer">module templatizer</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.templatizer.templatizer">
+            function <span class="apidocSignatureSpan"></span>templatizer
+            <span class="apidocSignatureSpan">(input, output, options, done)</span>
+            </a>
+
+        </li>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.templatizer.toString">
+            function <span class="apidocSignatureSpan">templatizer.</span>toString
+            <span class="apidocSignatureSpan">()</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.templatizer" id="apidoc.module.templatizer">module templatizer</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.templatizer.templatizer" id="apidoc.element.templatizer.templatizer">
+        function <span class="apidocSignatureSpan"></span>templatizer
+        <span class="apidocSignatureSpan">(input, output, options, done)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">templatizer = function (input, output, options, done) {
+    var args = arguments;
+
+    if (args.length === 3) {
+        // input, output, done
+        if (_.isString(args[1]) &amp;&amp; _.isFunction(args[2])) {
+            done = args[2];
+            options = null;
+        }
+        // input, options, done
+        else if (_.isObject(args[1]) &amp;&amp; _.isFunction(args[2])) {
+            done = args[2];
+            options = args[1];
+            output = null;
+        }
+    } else if (arguments.length === 2) {
+        // input, done
+        if (_.isFunction(args[1])) {
+            done = args[1];
+            options = null;
+            output = null;
+        }
+        // input, options
+        else if (_.isObject(args[1])) {
+            options = args[1];
+            done = null;
+            output = null;
+        }
+    }
+
+    // Default values for done and options so we dont error
+    done || (done = function (err, compiledOutput) {
+        if (err) {
+            throw err;
+        } else {
+            process.stdout.write(compiledOutput);
+        }
+    });
+    options || (options = {});
+
+    _.defaults(options, {
+        transformMixins: false,
+        jade: {},
+        globOptions: {}
+    });
+
+    var isWindows = process.platform === 'win32';
+    var pathSep = path.sep || (isWindows ? '\\' : '/');
+    var pathSepRegExp = /\/|\\/g;
+    var jadeCompileOptions = _.extend({
+        client: true,
+        compileDebug: false,
+        pretty: false
+    }, options.jade);
+    async.waterfall([
+        function (cb) {
+            if (typeof input === "string") {
+                glob(input, options.globOptions, cb);
+            } else {
+                cb(null, input);
+            }
+        },
+        function (matches, cb) {
+            var directories = _.chain(matches)
+                .map(function (templateDirectory) {
+                    if (path.extname(templateDirectory).length &gt; 1) {
+                        // Remove filename and ext
+                        return path.dirname(templateDirectory).replace(pathSepRegExp, pathSep);
+                    }
+                    return templateDirectory.replace(pathSepRegExp, pathSep);
+                })
+                .uniq()
+                .value();
+
+            if (!directories || directories.length === 0) {
+                return cb(new Error(input + ' did not match anything existing'));
+            }
+
+            async.each(directories, function (dir, dirDone) {
+                fs.exists(dir, function (exists) {
+                    if (!exists) {
+                        dirDone(new Error('Template directory ' + dir + ' does not exist.'));
+                    } else {
+                        dirDone(null);
+                    }
+                });
+            }, function (err) {
+                cb(err, err ? null : directories);
+            });
+        },
+        function (directories, cb) {
+            var folders = [];
+            var templates = [];
+            var _readTemplates = [];
+            var conflicts = [];
+            async.each(directories, function (dir, dirDone) {
+                var files = [];
+                var walker = walkdir(dir);
+                walker.on('path', function (file) {
+                    files.push(file);
+                });
+
+                walker.on('end', function () {
+                    files.sort();
+                    async.each(files, function (file, done) {
+
+                        var item = file.replace(path.resolve(dir), '').slice(1);
+                        // Skip hidden files
+                        if (item.charAt(0) === '.' || item.indexOf(pathSep + '.') !== -1) {
+                            return done();
+                        }
+
+                        // Skip files not matching the initial globbing pattern
+                        if (options.globOptions.ignore) {
+                            var match = function (ignorePattern) {
+                                return minimatch(file, ignorePattern);
+                            };
+                            if (options.globOptions.ignore.some(match)) {
+                                return do ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+
+    <h2>
+        <a href="#apidoc.element.templatizer.toString" id="apidoc.element.templatizer.toString">
+        function <span class="apidocSignatureSpan">templatizer.</span>toString
+        <span class="apidocSignatureSpan">()</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">toString = function () {
+    return text;
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+var compiledTemplate;
+try {
+    compiledTemplate = jade.compileClient(rawTemplate, jadeCompileOptions);
+} catch (e) {
+    cb(e);
+    return;
+}
+var template = beautify(compiledTemplate.<span class="apidocCodeKeywordSpan">toString</span>());
+template = renameJadeFn(template, dirString);
+template = simplifyTemplate(template);
+
+var mixins = [];
+if (options.transformMixins) {
+    var astResult = transformMixins({
+        template: template,
+...</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
+</body></html>
