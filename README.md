@@ -1,6 +1,6 @@
 # npmdoc-templatizer
 
-#### api documentation for  [templatizer (v2.0.5)](https://github.com/HenrikJoreteg/templatizer)  [![npm package](https://img.shields.io/npm/v/npmdoc-templatizer.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-templatizer) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-templatizer.svg)](https://travis-ci.org/npmdoc/node-npmdoc-templatizer)
+#### basic api documentation for  [templatizer (v2.0.5)](https://github.com/HenrikJoreteg/templatizer)  [![npm package](https://img.shields.io/npm/v/npmdoc-templatizer.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-templatizer) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-templatizer.svg)](https://travis-ci.org/npmdoc/node-npmdoc-templatizer)
 
 #### Simple solution for compiling jade templates into vanilla JS functions for blazin' fast client-side use.
 
